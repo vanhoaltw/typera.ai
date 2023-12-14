@@ -10,6 +10,7 @@ const router = createBrowserRouter([
 		path: "/",
 		errorElement: <ErrorPage />,
 		children: [
+			{ path: "/", element: <div>Hi</div> },
 			{
 				path: "/interview/:id",
 				element: <InterviewLayout />,
