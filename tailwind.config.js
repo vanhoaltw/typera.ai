@@ -9,7 +9,7 @@ module.exports = {
 			center: true,
 			padding: "2rem",
 			screens: {
-				"2xl": "1400px",
+				"2xl": "1410px",
 			},
 		},
 		extend: {
@@ -17,17 +17,43 @@ module.exports = {
 				primary: ["Inter", ...fontFamily.sans],
 			},
 			colors: {
-				primary: {
-					400: "#00E0F3",
-					500: "#00c4fd",
-				},
 				dark: "#333333",
+				white: "#fff",
+				background: "hsl(var(--background))",
+				foreground: "hsl(var(--foreground))",
+				primary: {
+					DEFAULT: "hsl(var(--primary))",
+					foreground: "hsl(var(--primary-foreground))",
+				},
+				secondary: {
+					DEFAULT: "hsl(var(--secondary))",
+					foreground: "hsl(var(--secondary-foreground))",
+				},
+				destructive: {
+					DEFAULT: "hsl(var(--destructive))",
+					foreground: "hsl(var(--destructive-foreground))",
+				},
+				muted: {
+					DEFAULT: "hsl(var(--muted))",
+					foreground: "hsl(var(--muted-foreground))",
+				},
+				accent: {
+					DEFAULT: "hsl(var(--accent))",
+					foreground: "hsl(var(--accent-foreground))",
+				},
+				popover: {
+					DEFAULT: "hsl(var(--popover))",
+					foreground: "hsl(var(--popover-foreground))",
+				},
+				card: {
+					DEFAULT: "hsl(var(--card))",
+					foreground: "hsl(var(--card-foreground))",
+				},
 			},
 		},
 	},
 	variants: {
 		extend: {},
 	},
-	plugins: [require('tailwindcss-animate')]
-
+	plugins: [require("tailwindcss-animate")],
 };

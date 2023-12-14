@@ -1,15 +1,25 @@
-import React from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import Home from "@/pages";
-import RootLayout from "@/components/layouts/RootLayout";
 import ErrorPage from "@/pages/_error";
+import Interview from "@/pages/interview/[id]";
+import Chat from "@/pages/interview/[id]/chat";
+import Voice from "@/pages/interview/[id]/voice";
+import InterviewLayout from "./components/layouts/InterviewLayout";
 
 const router = createBrowserRouter([
 	{
 		path: "/",
-		element: <RootLayout />,
 		errorElement: <ErrorPage />,
-		children: [{ path: "/", element: <Home /> }],
+		children: [
+			{
+				path: "/interview/:id",
+				element: <InterviewLayout />,
+				children: [
+					{ path: "", element: <Interview /> },
+					{ path: "chat", element: <Chat /> },
+					{ path: "voice", element: <Voice /> },
+				],
+			},
+		],
 	},
 ]);
 
