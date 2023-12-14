@@ -1,8 +1,8 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import ErrorPage from "@/pages/_error";
-import Interview from "@/pages/interview/[id]";
-import Chat from "@/pages/interview/[id]/chat";
-import Voice from "@/pages/interview/[id]/voice";
+import Interview from "@/pages/interview/detail";
+import Chat from "@/pages/interview/detail/chat";
+import Voice from "@/pages/interview/detail/voice";
 import InterviewLayout from "./components/layouts/InterviewLayout";
 
 const router = createBrowserRouter([
