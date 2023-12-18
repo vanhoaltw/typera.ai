@@ -2,27 +2,19 @@ import ChatComposer from "@/components/ChatComposer";
 import ChatItem from "@/components/ChatItem";
 import { RESEARCH } from "@/graphql/research";
 import { useContinueResearch, useStartResearch } from "@/hook/research";
-import { isBot } from "@/utils/common";
-import React, {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { useGeneralStore } from "@/store/general";
+import { getFileId, isBot } from "@/utils/common";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BeatLoader } from "react-spinners";
 
 const mockDataMessage = (role = "user", content) => {
 	return {
-		id: Date.now(),
+		id: `${role}-${Date.now()}`,
 		role,
 		content: [
 			{
 				type: "text",
-				text: {
-					value: content,
-					annotations: [],
-				},
+				text: { value: content, annotations: [] },
 			},
 		],
 	};
@@ -30,6 +22,8 @@ const mockDataMessage = (role = "user", content) => {
 
 const Chat = () => {
 	const scrollRef = useRef();
+
+	const { setFileId } = useGeneralStore();
 	const [messages, setMessages] = useState([]);
 	const [doContinueResearch, { loading: continueLoading }] =
 		useContinueResearch();
@@ -39,11 +33,15 @@ const Chat = () => {
 		loading: startLoading,
 		data: startData,
 	} = useStartResearch({
-		onCompleted: (result) => {
+		onCompleted: async (result) => {
 			if (result?.startRun?.status === "published") {
 				setIsFinished(true);
 			} else {
-				setMessages(result?.startRun?.messages?.reverse?.() || []);
+				const reverseMessage = result?.startRun?.messages?.reverse?.() || [];
+				const fileId = await getFileId(reverseMessage);
+
+				if (fileId) setFileId(fileId);
+				setMessages(reverseMessage);
 			}
 		},
 	});
@@ -58,27 +56,27 @@ const Chat = () => {
 		}
 	}, [messages?.length, startLoading, continueLoading]);
 
-	const handleSendMessage = useCallback(
-		(content) => {
-			const optimisticMessages = [
-				...startData.startRun.messages,
-				mockDataMessage("user", content),
-				mockDataMessage("assistant", ""),
-			];
-			setMessages(optimisticMessages);
-			doContinueResearch({
-				variables: {
-					uuid: startId,
-					content,
-				},
-				refetchQueries: [RESEARCH],
-				onCompleted: (result) => {
-					setMessages(result?.continueRun?.messages?.reverse?.() || []);
-				},
-			});
-		},
-		[startId]
-	);
+	const handleSendMessage = (content) => {
+		setMessages((pre) => {
+			const clone = [...pre];
+			clone.push(mockDataMessage("user", content));
+			clone.push(mockDataMessage("assistant", ""));
+			return clone;
+		});
+		doContinueResearch({
+			variables: {
+				uuid: startId,
+				content,
+			},
+			refetchQueries: [RESEARCH],
+			onCompleted: async (result) => {
+				const reverseMessage = result?.continueRun?.messages?.reverse?.() || [];
+				const fileId = await getFileId(reverseMessage);
+				if (fileId) setFileId(fileId);
+				setMessages(reverseMessage);
+			},
+		});
+	};
 
 	return (
 		<div className="relative h-full pb-4 overflow-hidden">
@@ -96,6 +94,7 @@ const Chat = () => {
 							<ChatItem
 								isLoading={continueLoading && idx === messages?.length - 1}
 								isBot={isBot(item?.role)}
+								isLast={idx === messages.length - 1}
 								key={item?.id}
 								data={item}
 							/>

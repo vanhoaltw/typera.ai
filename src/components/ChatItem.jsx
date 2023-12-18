@@ -1,5 +1,6 @@
-import { cn } from "@/utils/common";
-import React from "react";
+import { useGeneralStore } from "@/store/general";
+import { REGEX_FILE, cn, parsedText } from "@/utils/common";
+import React, { useMemo } from "react";
 import { BeatLoader } from "react-spinners";
 
 const AvatarBot = () => {
@@ -31,15 +32,14 @@ const AvatarBot = () => {
 	);
 };
 
-const Content = ({ data }) => {
-	const { type, text } = data || {};
-	if (type === "text") {
-		return <p>{text?.value}</p>;
-	}
-};
-
-const ChatItem = ({ data, isBot, isLoading }) => {
+const ChatItem = ({ data, isBot, isLoading, isLast }) => {
 	const { content } = data || {};
+	const { text, type } = content?.[0];
+
+	const textParsed = useMemo(
+		() => parsedText(text?.value, REGEX_FILE, () => ""),
+		[text, isLast]
+	);
 
 	return (
 		<div className={cn("flex gap-3 items-end", !isBot && "flex-row-reverse")}>
@@ -65,11 +65,9 @@ const ChatItem = ({ data, isBot, isLoading }) => {
 				)}
 			>
 				{isLoading ? (
-					<BeatLoader color="currentColor" />
+					<BeatLoader size={8} color="currentColor" />
 				) : (
-					content?.map((i, idx) => (
-						<Content data={i} key={`${i?.type}-${idx}`} />
-					))
+					<>{type === "text" && <p>{textParsed?.join?.("")}</p>}</>
 				)}
 			</div>
 		</div>

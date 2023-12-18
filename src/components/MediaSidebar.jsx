@@ -7,13 +7,20 @@ import BeatLoader from "react-spinners/BeatLoader";
 const MediaSidebar = () => {
 	const { fileId } = useGeneralStore();
 	const { data, loading } = useResearch();
-	const { files } = data || {};
+	const { files } = data?.research || {};
+
+	console.log({ fileId })
 
 	const renderMedia = useCallback(() => {
 		if (loading) return <BeatLoader />;
-		if (isEmpty(files)) {
+		if (!isEmpty(files)) {
 			const imgSrc = files?.[fileId];
-			return <img src={imgSrc} height={250} width={250} alt="" />;
+			return (
+				<div className="flex items-center flex-col justify-center gap-4">
+					<p className="text-lg font-bold max-w-sm text-center">Please look at this image as context for your answer.</p>
+					<img src={imgSrc} height="auto" width={300} alt="" />
+				</div>
+			);
 		}
 		return;
 	}, [loading, fileId, files]);
