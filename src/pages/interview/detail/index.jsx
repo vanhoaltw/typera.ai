@@ -1,7 +1,15 @@
 import { Button } from "@/components/Button";
+import { useGeneralStore } from "@/store/general";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 export default function Interview() {
+	const { setFileId } = useGeneralStore();
+
+	useEffect(() => {
+		setFileId(null);
+	}, []);
+
 	return (
 		<div className="h-full">
 			<div className="flex h-full flex-col items-center justify-center text-center max-w-lg mx-auto">
@@ -41,7 +49,7 @@ export default function Interview() {
 				</p>
 
 				<Button className="mb-2 w-[250px]" size="lg">
-					<Link to="/voice">Start Voice Interview</Link>
+					<Link to="voice">Start Voice Interview</Link>
 				</Button>
 
 				<Button

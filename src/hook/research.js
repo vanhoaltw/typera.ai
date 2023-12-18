@@ -7,13 +7,14 @@ import { getUniqueID } from "@/utils/fingerprint";
 export const useStartResearch = (mutateOptions = {}) => {
 	const [mutate, { loading, data }] = useMutation(START_RUN, mutateOptions);
 
-	const doRequest = useDebouncedCallback(async () => {
+	const doRequest = useDebouncedCallback(async (options) => {
 		const visitorId = getUniqueID();
 		mutate({
 			variables: {
 				researchId: 1,
 				identifier: visitorId,
 			},
+			...options,
 		});
 	}, 250);
 
