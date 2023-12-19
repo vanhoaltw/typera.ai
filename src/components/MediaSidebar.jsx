@@ -9,8 +9,6 @@ const MediaSidebar = () => {
 	const { data, loading } = useResearch();
 	const { files } = data?.research || {};
 
-	console.log({ fileId })
-
 	const renderMedia = useCallback(() => {
 		if (loading) return <BeatLoader />;
 		if (!isEmpty(files)) {

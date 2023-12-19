@@ -12,7 +12,12 @@ import { useGeneralStore } from "@/store/general";
 import { RESEARCH } from "@/graphql/research";
 import { Link, useParams } from "react-router-dom";
 
-const parseMessage = (v) => parsedText(v, REGEX_FILE, () => "");
+const parseMessage = (v) =>
+	parsedText(v, REGEX_FILE, (matchResult) => {
+		const json = safeParse(matchResult);
+		if (json?.question) return json.question;
+		return "";
+	});
 
 const Voice = () => {
 	const { id: paramId } = useParams();
@@ -76,7 +81,7 @@ const Voice = () => {
 		});
 
 		return () => {
-			stopListening()
+			stopListening();
 		};
 	}, []);
 

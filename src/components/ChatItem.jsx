@@ -1,5 +1,4 @@
-import { useGeneralStore } from "@/store/general";
-import { REGEX_FILE, cn, parsedText } from "@/utils/common";
+import { REGEX_FILE, cn, parsedText, safeParse } from "@/utils/common";
 import React, { useMemo } from "react";
 import { BeatLoader } from "react-spinners";
 
@@ -32,13 +31,18 @@ const AvatarBot = () => {
 	);
 };
 
-const ChatItem = ({ data, isBot, isLoading, isLast }) => {
+const ChatItem = ({ data, isBot, isLoading }) => {
 	const { content } = data || {};
 	const { text, type } = content?.[0];
 
 	const textParsed = useMemo(
-		() => parsedText(text?.value, REGEX_FILE, () => ""),
-		[text, isLast]
+		() =>
+			parsedText(text?.value, REGEX_FILE, (value) => {
+				const json = safeParse(value);
+				if (json?.question) return json.question;
+				return "";
+			}),
+		[text]
 	);
 
 	return (
@@ -67,7 +71,13 @@ const ChatItem = ({ data, isBot, isLoading, isLast }) => {
 				{isLoading ? (
 					<BeatLoader size={8} color="currentColor" />
 				) : (
-					<>{type === "text" && <p>{textParsed?.join?.("")}</p>}</>
+					<>
+						{type === "text" && (
+							<p className="min-w-=0 break-words whitespace-pre-wrap">
+								{textParsed?.join?.("")}
+							</p>
+						)}
+					</>
 				)}
 			</div>
 		</div>

@@ -25,33 +25,44 @@ export const isBot = (role) => {
 	return role === "assistant";
 };
 
-export const REGEX_FILE = /\((image_id|media_id):\s*(.*?)\)/gi;
+export const REGEX_FILE = /(?:```json|```)\n([\s\S]*?)\n```/;
+
 export const parsedText = (content, regex, replaceFn) => {
 	let contentLeft = content;
 	let matched;
 	const parsedList = [];
-
 	regex.lastIndex = 0;
+
 	// eslint-disable-next-line no-cond-assign
 	while (contentLeft && (matched = regex.exec(contentLeft))) {
 		const contentBeforeMatch = contentLeft.substring(0, matched.index);
 		parsedList.push(contentBeforeMatch);
-		parsedList.push(replaceFn(matched[0]));
+		parsedList.push(replaceFn(matched[1]));
 		contentLeft = contentLeft.substring(matched.index + matched[0].length);
 		regex.lastIndex = 0;
 	}
 	parsedList.push(contentLeft);
-
 	return parsedList;
 };
 
 export const getFileId = async (messages = []) => {
-	const message = await messages.find((i) =>
-		REGEX_FILE.test(i?.content?.[0]?.text?.value)
-	);
-	if (message) {
-		const r = message.content[0].text.value;
-		return r.split(":")?.[1]?.trim?.()?.replace(')', '');
+	let jsonMarkdown = "";
+	await messages.find((i) => {
+		jsonMarkdown = i?.content?.[0]?.text?.value?.match(REGEX_FILE)?.[1];
+		return !!jsonMarkdown;
+	});
+
+	if (jsonMarkdown) {
+		const r = safeParse(jsonMarkdown);
+		return r?.["image_id"] || r?.["media_id"];
 	}
 	return null;
+};
+
+export const safeParse = (str) => {
+	try {
+		return JSON.parse(str);
+	} catch (e) {
+		return null;
+	}
 };
