@@ -48,7 +48,6 @@ const Voice = () => {
 				uuid: startId,
 				content: transcript,
 			},
-			refetchQueries: [RESEARCH],
 			onCompleted: async (result) => {
 				const messages = result?.continueRun?.messages || [];
 				const fileId = await getFileId(messages);

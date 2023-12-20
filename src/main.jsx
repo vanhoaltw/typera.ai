@@ -1,7 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "@/App.jsx";
+
 import "@/styles/global.css";
+import "react-image-lightbox/style.css";
+
 import { ApolloProvider } from "@apollo/client";
 import client from "@/utils/apolloClient";
 

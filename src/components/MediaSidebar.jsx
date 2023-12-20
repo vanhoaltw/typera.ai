@@ -1,27 +1,40 @@
 import { useResearch } from "@/hook/research";
+import { useForceUpdate } from "@/hook/useForceUpdate";
 import { useGeneralStore } from "@/store/general";
-import { isEmpty } from "@/utils/common";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
+import Lightbox from "react-image-lightbox";
 import BeatLoader from "react-spinners/BeatLoader";
 
 const MediaSidebar = () => {
+	const [isOpen, setIsOpen] = useState(false);
 	const { fileId } = useGeneralStore();
 	const { data, loading } = useResearch();
 	const { files } = data?.research || {};
+	const forceUpdate = useForceUpdate();
+
+	const imgSrc = files?.[fileId];
 
 	const renderMedia = useCallback(() => {
 		if (loading) return <BeatLoader />;
-		if (!isEmpty(files)) {
-			const imgSrc = files?.[fileId];
+		if (!!imgSrc) {
 			return (
 				<div className="flex items-center flex-col justify-center gap-4">
-					<p className="text-lg font-bold max-w-sm text-center">Please look at this image as context for your answer.</p>
-					<img src={imgSrc} height="auto" width={300} alt="" />
+					<p className="text-lg font-bold max-w-sm text-center">
+						Please look at this image as context for your answer.
+					</p>
+					<img
+						onClick={() => setIsOpen(true)}
+						src={imgSrc}
+						height="auto"
+						className="cursor-pointer"
+						width={300}
+						alt=""
+					/>
 				</div>
 			);
 		}
 		return;
-	}, [loading, fileId, files]);
+	}, [loading, imgSrc]);
 
 	return (
 		<aside className="bg-white overflow-hidden w-[568px] h-full relative hidden lg:flex items-center justify-center rounded-lg">
@@ -36,6 +49,14 @@ const MediaSidebar = () => {
 				</div>
 			) : (
 				renderMedia()
+			)}
+
+			{isOpen && (
+				<Lightbox
+					onImageLoad={forceUpdate}
+					mainSrc={imgSrc}
+					onCloseRequest={() => setIsOpen(false)}
+				/>
 			)}
 		</aside>
 	);

@@ -37,9 +37,8 @@ const Chat = () => {
 			if (result?.startRun?.status === "published") {
 				setIsFinished(true);
 			} else {
-				const reverseMessage = result?.startRun?.messages?.reverse?.() || [];
-				const fileId = await getFileId(reverseMessage);
-
+				const reverseMessage = result?.startRun?.messages?.toReversed?.() || [];
+				const fileId = await getFileId(result?.startRun?.messages);
 				if (fileId) setFileId(fileId);
 				setMessages(reverseMessage);
 			}
@@ -70,8 +69,9 @@ const Chat = () => {
 			},
 			refetchQueries: [RESEARCH],
 			onCompleted: async (result) => {
-				const reverseMessage = result?.continueRun?.messages?.reverse?.() || [];
-				const fileId = await getFileId(reverseMessage);
+				const reverseMessage =
+					result?.continueRun?.messages?.toReversed?.() || [];
+				const fileId = await getFileId(result?.continueRun?.messages);
 				if (fileId) setFileId(fileId);
 				setMessages(reverseMessage);
 			},
