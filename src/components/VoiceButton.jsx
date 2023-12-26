@@ -2,8 +2,12 @@ import Micro from "@/assets/micro";
 import useMicVisualize from "@/hook/useMicVisualize";
 import { Button } from "./Button";
 import { BeatLoader } from "react-spinners";
+import AudioVisualizer from "./AudioVisualizer";
+import { useDebounce } from "use-debounce";
+import { memo } from "react";
 
 const VoiceButton = ({
+	audioRef,
 	onStartSpeech,
 	onFinishSpeech,
 	onInterrupt,
@@ -12,13 +16,18 @@ const VoiceButton = ({
 	loading,
 }) => {
 	const { level } = useMicVisualize({ disabled: !listening });
+	const [stateSpeaking] = useDebounce(speaking || loading, 250);
 
-	if (speaking || loading) {
+	if (stateSpeaking) {
 		return (
 			<div className="flex items-center flex-col justify-center gap-3">
-				{loading && <BeatLoader />}
+				<div className="h-[80px]  flex items-center justify-center">
+					{loading ? <BeatLoader /> : <AudioVisualizer audioRef={audioRef} />}
+				</div>
+
 				<Button
 					onClick={onInterrupt}
+					disabled={loading}
 					variant="outline"
 					className="bg-white text-[#8F9BB3] hover:bg-white"
 				>
@@ -48,4 +57,4 @@ const VoiceButton = ({
 	);
 };
 
-export default VoiceButton;
+export default memo(VoiceButton);

@@ -3,13 +3,16 @@ import { useMutation, useQuery } from "@apollo/client";
 import { useDebouncedCallback } from "use-debounce";
 import { useParams } from "react-router-dom";
 import { getUniqueID } from "@/utils/fingerprint";
+import { useGeneralStore } from "@/store/general";
+import { getFileId } from "@/utils/common";
+import { useEffect, useState } from "react";
 
 export const useStartResearch = (mutateOptions = {}) => {
 	const [mutate, { loading, data }] = useMutation(START_RUN, mutateOptions);
 
 	const doRequest = useDebouncedCallback(async (options) => {
 		const visitorId = getUniqueID();
-		mutate({
+		await mutate({
 			variables: {
 				researchId: 1,
 				identifier: visitorId,

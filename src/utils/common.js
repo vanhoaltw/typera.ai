@@ -66,3 +66,17 @@ export const safeParse = (str) => {
 		return null;
 	}
 };
+
+export const safePlay = (mediaEl, onError) => {
+	const playPromise = mediaEl?.play?.();
+	if (playPromise) {
+		playPromise
+			.then(() => {})
+			.catch((err) => {
+				console.warn(err);
+				if (typeof onError === "function") onError(err);
+				if (err.name === "NotAllowedError") return;
+				// eslint-disable-next-line no-console
+			});
+	}
+};

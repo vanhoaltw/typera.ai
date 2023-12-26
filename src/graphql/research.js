@@ -48,3 +48,9 @@ export const RESEARCH = gql`
 		}
 	}
 `;
+
+export const STREAM = gql`
+	query Query($text: String!) {
+		stream(text: $text)
+	}
+`;
