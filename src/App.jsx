@@ -16,7 +16,6 @@ const router = createBrowserRouter([
 				children: [
 					{ path: "", element: <Interview /> },
 					{ path: "chat", element: <Chat /> },
-					{ path: "voice", element: <Voice /> },
 				],
 			},
 		],

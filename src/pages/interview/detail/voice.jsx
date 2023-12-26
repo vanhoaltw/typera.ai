@@ -5,7 +5,7 @@ import SpeechRecognition, {
 } from "react-speech-recognition";
 import { useContinueResearch, useStartResearch } from "@/hook/research";
 import { useDebouncedCallback } from "use-debounce";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { BeatLoader } from "react-spinners";
 import {
 	REGEX_FILE,
@@ -27,64 +27,67 @@ const parseMessage = (v) =>
 		return "";
 	});
 
-const Voice = () => {
+let audioRef = null;
+
+const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 	const { id: paramId } = useParams();
 	const [audio, setAudio] = useState();
-	const [init, setInit] = useState(false);
-	const [isSpeaking, setIsSpeaking] = useState(false);
-	const [getStream, { loading: getStreamLoading }] = useLazyQuery(STREAM);
-	const [currentText, setCurrentText] = useState("");
+	const [isSpeaking, setIsSpeaking] = useState(!!textStarter);
+
+	const [currentText, setCurrentText] = useState(textStarter);
 	const { setFileId } = useGeneralStore();
-	const {
-		transcript,
-		resetTranscript,
-		listening,
-		browserSupportsSpeechRecognition,
-		isMicrophoneAvailable,
-	} = useSpeechRecognition({ clearTranscriptOnListen: true });
 
-	const { doRequest: doStartResearch, data: startData } = useStartResearch();
-	const startId = startData?.startRun?.uuid;
-
-	const [doContinueResearch, { loading: continueLoading }] =
-		useContinueResearch();
+	const [voiceLoading, setVoiceLoading] = useState(false);
+	const [getStream] = useLazyQuery(STREAM);
+	const [doContinueResearch] = useContinueResearch();
 
 	const handleStartSpeech = useDebouncedCallback(() => {
 		SpeechRecognition.startListening({ continuous: true });
 	}, 250);
 
-	const handleTTS = async (text) => {
-		setIsSpeaking(true);
-		const { data: { stream } = {} } = await getStream({
-			variables: { text },
-		});
-		if (stream?.data && stream?.type === "Buffer") {
-			const soundBuffer = stream?.data;
-			const audioBlob = await audioBufferToBlob(soundBuffer);
-			if (!audioBlob || audioBlob.size === 0) return;
-			if (audio) audio.remove();
-			if (audio?.src) URL.revokeObjectURL(audio.src);
-			const { audio: newAudio } = playAudioBlob(audioBlob);
-			setAudio(newAudio);
-			safePlay(newAudio, () => setIsSpeaking(false));
-		}
-	};
+	const handleTTS = useDebouncedCallback(
+		async (text) => {
+			setIsSpeaking(true);
+			const { data: { stream } = {} } = await getStream({
+				variables: { text },
+			});
+			if (stream?.data && stream?.type === "Buffer") {
+				const soundBuffer = stream?.data;
+				const audioBlob = await audioBufferToBlob(soundBuffer);
+				if (!audioBlob || audioBlob.size === 0) return;
+				if (audio) {
+					audio.remove();
+					audio.currentTime = 0;
+					audio.pause();
+					URL.revokeObjectURL(audio.src);
+				}
+				const { audio: newAudio } = playAudioBlob(audioBlob);
+				
+				safePlay(newAudio, () => setIsSpeaking(false));
+				setAudio(newAudio);
+				audioRef = newAudio;
+			}
+		},
+		250,
+		{ leading: false, trailing: true }
+	);
 
 	const handleInterrupt = () => {
-		setIsSpeaking(false);
-		if (audio) {
-			audio.currentTime = 0;
-			audio.pause();
+		if (audioRef) {
+			audioRef.currentTime = 0;
+			audioRef.pause();
 			setAudio(null);
 		}
 	};
 
 	const handleContinueResearch = () => {
+		setVoiceLoading(true);
 		doContinueResearch({
 			variables: {
 				uuid: startId,
 				content: transcript,
 			},
+			onError: () => setVoiceLoading(false),
 			onCompleted: async (result) => {
 				const messages = result?.continueRun?.messages || [];
 				const fileId = await getFileId(messages);
@@ -92,23 +95,15 @@ const Voice = () => {
 				await handleTTS(parser.join(" "));
 				setCurrentText(parser);
 				if (fileId) setFileId(fileId);
+				setVoiceLoading(false);
 			},
 		});
 		resetTranscript();
 	};
 
-	useLayoutEffect(() => {
-		doStartResearch({
-			onCompleted: async (result) => {
-				setInit(true);
-				const message = result?.startRun?.messages;
-				const fileId = await getFileId(message);
-				const parser = parseMessage(message[0]?.content?.[0]?.text?.value);
-				setCurrentText(parser);
-				if (fileId) setFileId(fileId);
-			},
-		});
-
+	useEffect(() => {
+		handleStartSpeech();
+		handleTTS(currentText);
 		return () => {
 			SpeechRecognition.stopListening();
 			handleInterrupt();
@@ -116,46 +111,29 @@ const Voice = () => {
 	}, []);
 
 	useEffect(() => {
-		const onAudioEnd = () => setIsSpeaking(false);
+		const onAudioEnd = () => {
+			console.log('onend');
+			setIsSpeaking(false);
+		};
 		if (audio) {
 			audio.addEventListener("ended", onAudioEnd);
 		}
 		return () => {
-			audio?.removeEventListener?.("ended", onAudioEnd);
+			if (audio) {
+				audio?.removeEventListener?.("ended", onAudioEnd);
+			}
 		};
-	}, [audio]);
+	}, [audio?.src]);
 
 	useEffect(() => {
 		let timer;
-		if (
-			listening &&
-			!init &&
-			!continueLoading &&
-			!isSpeaking &&
-			!!transcript &&
-			!!startId
-		) {
+		if (!voiceLoading && !isSpeaking && !!transcript?.trim?.() && !!startId) {
 			timer = setTimeout(() => handleContinueResearch(), 2000);
 		}
 		return () => {
 			clearTimeout(timer);
 		};
-	}, [transcript, listening, init, continueLoading, startId, isSpeaking]);
-
-	if (!browserSupportsSpeechRecognition) {
-		return <span>Browser doesn't support speech recognition.</span>;
-	}
-
-	if (!isMicrophoneAvailable) {
-		return <span>Please turn on your microphone</span>;
-	}
-
-	if (!init)
-		return (
-			<div className="flex items-center justify-center h-full">
-				<BeatLoader />
-			</div>
-		);
+	}, [transcript, voiceLoading, startId, isSpeaking]);
 
 	return (
 		<div className="h-full flex flex-col items-center justify-center p-6 relative">
@@ -175,12 +153,10 @@ const Voice = () => {
 
 			<div className="z-10 h-36">
 				<VoiceButton
-					audioRef={{ current: audio }}
-					onStartSpeech={handleStartSpeech}
+					audio={audio}
 					onFinishSpeech={handleContinueResearch}
 					onInterrupt={handleInterrupt}
-					loading={continueLoading || getStreamLoading}
-					listening={listening}
+					loading={voiceLoading}
 					speaking={isSpeaking}
 				/>
 			</div>
@@ -193,6 +169,82 @@ const Voice = () => {
 			</Link>
 		</div>
 	);
+});
+
+const VoiceWrapper = () => {
+	const [init, setInit] = useState(false);
+	const { setFileId } = useGeneralStore();
+	const { id: paramId } = useParams();
+	const [currentText, setCurrentText] = useState(null);
+	const {
+		transcript,
+		resetTranscript,
+		browserSupportsSpeechRecognition,
+		isMicrophoneAvailable,
+	} = useSpeechRecognition();
+
+	const { doRequest: doStartResearch, data: startData } = useStartResearch({
+		onCompleted: async (result) => {
+			const message = result?.startRun?.messages;
+			const fileId = await getFileId(message);
+			const parser = parseMessage(message[0]?.content?.[0]?.text?.value);
+			setCurrentText(parser.join(" "));
+			if (fileId) setFileId(fileId);
+			setInit(true);
+		},
+	});
+
+	const startId = startData?.startRun?.uuid;
+
+	useEffect(() => {
+		SpeechRecognition.startListening({ continuous: true }).then(() => {
+			navigator.mediaDevices
+				.getUserMedia({ audio: true })
+				.then(() => doStartResearch())
+				.catch(() => console.log("not premiit"));
+		});
+	}, []);
+
+	if (!browserSupportsSpeechRecognition) {
+		return <span>Browser doesn't support speech recognition.</span>;
+	}
+
+	if (!isMicrophoneAvailable) {
+		return (
+			<div className="relative flex items-center justify-center h-full flex-col gap-4 text-red-500 text-center px-4">
+				<p>
+					We're having trouble accessing your microphone. Please make sure
+					you've granted access to your microphone in your browser settings and
+					refresh the page.
+				</p>
+				<p>If you're unable, click the link below to switch to a text chat.</p>
+
+				<Link
+					to={`/interview/${paramId}/chat`}
+					className="underline text-black opacity-60 text-sm absolute bottom-4 left-1/2 -translate-x-1/2"
+				>
+					Switch to text chat
+				</Link>
+			</div>
+		);
+	}
+
+	if (!init) {
+		return (
+			<div className="flex items-center justify-center h-full">
+				<BeatLoader />
+			</div>
+		);
+	}
+
+	return (
+		<Voice
+			transcript={transcript}
+			resetTranscript={resetTranscript}
+			startId={startId}
+			textStarter={currentText}
+		/>
+	);
 };
 
-export default Voice;
+export default VoiceWrapper;

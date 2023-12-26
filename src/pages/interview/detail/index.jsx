@@ -1,14 +1,12 @@
 import { Button } from "@/components/Button";
-import { useGeneralStore } from "@/store/general";
-import { useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import Voice from "./voice";
 
 export default function Interview() {
-	const { setFileId } = useGeneralStore();
+	const [isVoice, setIsVoice] = useState(false);
 
-	useEffect(() => {
-		setFileId(null);
-	}, []);
+	if (isVoice) return <Voice />;
 
 	return (
 		<div className="h-full">
@@ -48,8 +46,12 @@ export default function Interview() {
 					begin!
 				</p>
 
-				<Button className="mb-2 w-[250px]" size="lg">
-					<Link to="voice">Start Voice Interview</Link>
+				<Button
+					onClick={() => setIsVoice(true)}
+					className="mb-2 w-[250px]"
+					size="lg"
+				>
+					Start Voice Interview
 				</Button>
 
 				<Button

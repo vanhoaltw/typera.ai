@@ -1,39 +1,32 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 const getAudioContext = () =>
 	new (window.AudioContext || window.webkitAudioContext)();
 
-const colorShades = ["#F99B56", "#DF7733", "#C45B1C", "#A73E07"];
+const maxHeight = 80;
+const minHeight = 40;
+const count = 5;
+const barsSet = Array.from({ length: (count + 1) / 2 }).fill(0);
 
-const AudioVisualizer = ({ audioRef }) => {
+const DEBUG = process.env.NODE_ENV !== "production";
+
+const AudioVisualizer = ({ audio }) => {
+	const [bars, setBars] = useState([0, 0, 0, 0]);
 	const audioContextRef = useRef(null);
 	const audioSourceRef = useRef(null);
 	const analyserRef = useRef(null);
 	const dataArrayRef = useRef(null);
 	const animationFrameIdRef = useRef(null);
-	const canvasRef = useRef(null);
 
 	const renderFrame = () => {
 		animationFrameIdRef.current = requestAnimationFrame(renderFrame);
-		if (analyserRef.current && dataArrayRef?.current) {
-			const bufferLength = analyserRef.current.frequencyBinCount;
+		if (analyserRef.current && dataArrayRef.current) {
 			analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-
-			const { width, height } = canvasRef.current || {};
-			const barWidth = Math.ceil(width / bufferLength) * 2.5;
-
-			const canvasContext = canvasRef.current.getContext("2d");
-			canvasContext.clearRect(0, 0, width, height);
-
-			let x = 0;
-			dataArrayRef.current.forEach((item) => {
-				const y = (item / 255) * height * 1.1;
-				const shade = Math.floor((item / 255) * colorShades.length); // generate a shade of blue based on the audio input
-				const colorHex = colorShades[shade];
-				canvasContext.fillStyle = colorHex;
-				canvasContext.fillRect(x, height - y, barWidth, y);
-				x = x + barWidth;
+			const step = Math.floor(dataArrayRef.current.length / barsSet.length);
+			const newBars = barsSet.map((_, i) => {
+				return dataArrayRef.current?.[i * step] || 0;
 			});
+			setBars(newBars);
 		}
 	};
 
@@ -44,7 +37,8 @@ const AudioVisualizer = ({ audioRef }) => {
 	};
 
 	useEffect(() => {
-		if (!audioRef.current || !canvasRef.current) return;
+		if (!audio) return;
+
 		try {
 			if (!audioSourceRef.current) {
 				audioContextRef.current = getAudioContext();
@@ -55,13 +49,13 @@ const AudioVisualizer = ({ audioRef }) => {
 				dataArrayRef.current = new Uint8Array(bufferLength);
 
 				audioSourceRef.current =
-					audioContextRef.current.createMediaElementSource(audioRef.current);
+					audioContextRef.current.createMediaElementSource(audio);
 				audioSourceRef.current.connect(audioContextRef.current.destination);
 				audioSourceRef.current.connect(analyserRef.current);
 			}
 			renderFrame();
 		} catch (error) {
-			console.error("Error useAudioVisualizer:", error);
+			if (DEBUG) console.error("Error useAudioVisualizer:", error);
 		}
 
 		return () => {
@@ -72,9 +66,26 @@ const AudioVisualizer = ({ audioRef }) => {
 			}
 			resetRenderFrame();
 		};
-	}, [audioRef?.current?.src]);
+	}, [audio?.src]);
 
-	return <canvas ref={canvasRef} className="h-20 w-40 mx-auto" />;
+	const reverseBars = [...bars].slice(1, bars.length).reverse();
+
+	return (
+		<div className="h-20 flex items-center justify-center gap-1.5">
+			{[...reverseBars, ...bars].map((bar, index) => (
+				<div
+					key={index}
+					className="bg-primary rounded-md w-6 transform-gpu"
+					style={{
+						height: minHeight + (bar / 255) * (maxHeight - minHeight),
+						transition: "height 50ms cubic-bezier(.2,-0.5,.8,1.5)",
+					}}
+				/>
+			))}
+		</div>
+	);
 };
 
-export default memo(AudioVisualizer);
+export default memo(AudioVisualizer, (pre, next) => {
+	return pre?.src !== next?.src;
+});

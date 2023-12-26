@@ -73,7 +73,7 @@ export const safePlay = (mediaEl, onError) => {
 		playPromise
 			.then(() => {})
 			.catch((err) => {
-				console.warn(err);
+				console.warn(`play: ${err}`);
 				if (typeof onError === "function") onError(err);
 				if (err.name === "NotAllowedError") return;
 				// eslint-disable-next-line no-console

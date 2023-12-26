@@ -3,26 +3,41 @@ import useMicVisualize from "@/hook/useMicVisualize";
 import { Button } from "./Button";
 import { BeatLoader } from "react-spinners";
 import AudioVisualizer from "./AudioVisualizer";
-import { useDebounce } from "use-debounce";
 import { memo } from "react";
 
+const MicroButton = ({ onFinishSpeech }) => {
+	const { level } = useMicVisualize();
+	const scalePercent = Math.min(Math.max(level / 50, 1), 1.2);
+
+	return (
+		<div className="flex items-center flex-col">
+			<button
+				type="button"
+				onClick={onFinishSpeech}
+				style={{ transform: `scale(${scalePercent})` }}
+				className="aspect-square transition-transform flex items-center cursor-pointer justify-center h-[80px] rounded-full bg-primary"
+			>
+				<Micro />
+			</button>
+			<span className="text-base text-[#8F9BB3] mt-3 max-w-sm text-center">
+				Simply stop talking or hit the microphone button to send your response.
+			</span>
+		</div>
+	);
+};
+
 const VoiceButton = ({
-	audioRef,
-	onStartSpeech,
+	audio,
 	onFinishSpeech,
 	onInterrupt,
-	listening,
 	speaking,
 	loading,
 }) => {
-	const { level } = useMicVisualize({ disabled: !listening });
-	const [stateSpeaking] = useDebounce(speaking || loading, 250);
-
-	if (stateSpeaking) {
+	if (speaking || loading) {
 		return (
 			<div className="flex items-center flex-col justify-center gap-3">
 				<div className="h-[80px]  flex items-center justify-center">
-					{loading ? <BeatLoader /> : <AudioVisualizer audioRef={audioRef} />}
+					{loading ? <BeatLoader /> : <AudioVisualizer audio={audio} />}
 				</div>
 
 				<Button
@@ -38,23 +53,7 @@ const VoiceButton = ({
 		);
 	}
 
-	return (
-		<div className="flex items-center flex-col">
-			<button
-				type="button"
-				onClick={listening ? onFinishSpeech : onStartSpeech}
-				style={{ outline: `${level / 5}px solid #eee` }}
-				className="aspect-square flex items-center cursor-pointer hover:bg-primary/60 transition-colors justify-center h-[80px] rounded-full bg-primary outline outline-primary/20"
-			>
-				<Micro />
-			</button>
-			<span className="text-base text-[#8F9BB3] mt-2 max-w-sm text-center">
-				{!listening
-					? "Press the button to speak"
-					: "Simply stop talking or hit the microphone button to send your response."}
-			</span>
-		</div>
-	);
+	return <MicroButton onFinishSpeech={onFinishSpeech} />;
 };
 
 export default memo(VoiceButton);

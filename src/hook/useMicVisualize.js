@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const useMicVisualize = ({ disabled }) => {
+const useMicVisualize = () => {
 	const [level, setLevel] = useState(0);
 
 	const audioContextRef = useRef(null);
@@ -28,7 +28,6 @@ const useMicVisualize = ({ disabled }) => {
 	};
 
 	useEffect(() => {
-        if (disabled) return () => {}
 		let tracks = [];
 		try {
 			const init = async () => {
@@ -69,7 +68,7 @@ const useMicVisualize = ({ disabled }) => {
 			});
 			resetRenderFrame;
 		};
-	}, [disabled]);
+	}, []);
 
 	return { level };
 };
