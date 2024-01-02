@@ -38,6 +38,7 @@ export const RESEARCH = gql`
 			creatorId
 			files
 			id
+			questions
 			end
 			description
 			instruction

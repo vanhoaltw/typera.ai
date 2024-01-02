@@ -59,6 +59,26 @@ export const getFileId = async (messages = []) => {
 	return null;
 };
 
+export const getLatestQuestion = async (messages = []) => {
+	let jsonMarkdown = "";
+	await messages.find((i) => {
+		jsonMarkdown = i?.content?.[0]?.text?.value?.match(REGEX_FILE)?.[1];
+		return !!jsonMarkdown;
+	});
+
+	if (jsonMarkdown) {
+		const r = safeParse(jsonMarkdown);
+		return r;
+	}
+	return null;
+};
+
+export const extractQuestion = (message) => {
+	const jsonMarkdown =
+		message?.content?.[0]?.text?.value?.match(REGEX_FILE)?.[1];
+	return safeParse(jsonMarkdown);
+};
+
 export const safeParse = (str) => {
 	try {
 		return JSON.parse(str);
