@@ -3,7 +3,8 @@ import ChatItem from "@/components/ChatItem";
 import { RESEARCH } from "@/graphql/research";
 import { useContinueResearch, useStartResearch } from "@/hook/research";
 import { useGeneralStore } from "@/store/general";
-import { getFileId, isBot } from "@/utils/common";
+import { isBot } from "@/utils/common";
+import { extractJsonFromString } from "@/utils/string";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BeatLoader } from "react-spinners";
 
@@ -23,7 +24,7 @@ const mockDataMessage = (role = "user", content) => {
 const Chat = () => {
 	const scrollRef = useRef();
 
-	const { setFileId } = useGeneralStore();
+	const { setCurrentQuestion } = useGeneralStore();
 	const [messages, setMessages] = useState([]);
 	const [doContinueResearch, { loading: continueLoading }] =
 		useContinueResearch();
@@ -37,9 +38,12 @@ const Chat = () => {
 			if (result?.startRun?.status === "published") {
 				setIsFinished(true);
 			} else {
-				const reverseMessage = result?.startRun?.messages?.toReversed?.() || [];
-				const fileId = await getFileId(result?.startRun?.messages);
-				if (fileId) setFileId(fileId);
+				const newMessages = result?.startRun?.messages;
+				const reverseMessage = newMessages?.toReversed?.() || [];
+				const { obj } = extractJsonFromString(
+					newMessages?.[0]?.content?.[0]?.text?.value
+				);
+				if (obj) setCurrentQuestion(obj);
 				setMessages(reverseMessage);
 			}
 		},
@@ -69,10 +73,12 @@ const Chat = () => {
 			},
 			refetchQueries: [RESEARCH],
 			onCompleted: async (result) => {
-				const reverseMessage =
-					result?.continueRun?.messages?.toReversed?.() || [];
-				const fileId = await getFileId(result?.continueRun?.messages);
-				if (fileId) setFileId(fileId);
+				const newMessages = result?.continueRun?.messages;
+				const reverseMessage = newMessages?.toReversed?.() || [];
+				const { obj } = extractJsonFromString(
+					newMessages?.[0]?.content?.[0]?.text?.value
+				);
+				if (obj) setCurrentQuestion(obj);
 				setMessages(reverseMessage);
 			},
 		});
@@ -90,15 +96,21 @@ const Chat = () => {
 						ref={scrollRef}
 						className="flex flex-col w-full gap-[24px] overflow-auto h-full pb-20 pt-[40px] px-[25px]"
 					>
-						{messages?.map?.((item, idx) => (
-							<ChatItem
-								isLoading={continueLoading && idx === messages?.length - 1}
-								isBot={isBot(item?.role)}
-								isLast={idx === messages.length - 1}
-								key={item?.id}
-								data={item}
-							/>
-						))}
+						{messages?.map?.((item, idx) => {
+							const nextMessage = messages?.[idx + 1];
+							return (
+								<ChatItem
+									key={item?.id}
+									isLoading={continueLoading && idx === messages?.length - 1}
+									isBot={isBot(item?.role)}
+									data={item}
+									onAnswer={(answer) => {
+										handleSendMessage(answer);
+									}}
+									optionAnswered={nextMessage?.content?.[0]?.text?.value}
+								/>
+							);
+						})}
 					</div>
 
 					<div className="absolute bottom-0 left-0 w-full px-[25px] bg-white">

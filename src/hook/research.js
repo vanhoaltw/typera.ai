@@ -4,17 +4,17 @@ import { useDebouncedCallback } from "use-debounce";
 import { useParams } from "react-router-dom";
 import { getUniqueID } from "@/utils/fingerprint";
 import { useGeneralStore } from "@/store/general";
-import { getFileId } from "@/utils/common";
-import { useEffect, useState } from "react";
 
 export const useStartResearch = (mutateOptions = {}) => {
 	const [mutate, { loading, data }] = useMutation(START_RUN, mutateOptions);
+	const { research } = useGeneralStore();
 
 	const doRequest = useDebouncedCallback(async (options) => {
+		if (!research?.id) return;
 		const visitorId = getUniqueID();
 		await mutate({
 			variables: {
-				researchId: 1,
+				researchId: research.id,
 				identifier: visitorId,
 			},
 			...options,
@@ -30,8 +30,13 @@ export const useContinueResearch = () => {
 
 export const useResearch = () => {
 	const { id } = useParams();
+	const { setResearch } = useGeneralStore();
+
 	return useQuery(RESEARCH, {
 		variables: { uuid: id },
 		skip: !id,
+		onCompleted: (data) => {
+			setResearch(data?.research);
+		},
 	});
 };

@@ -59,14 +59,17 @@ const AudioVisualizer = ({ audio }) => {
 		}
 
 		return () => {
-			if (!audioSourceRef.current) {
-				audioSourceRef.current?.disconnect();
-				analyserRef.current?.disconnect();
-				audioContextRef.current?.close();
-			}
 			resetRenderFrame();
 		};
 	}, [audio?.src]);
+
+	useEffect(() => {
+		return () => {
+			audioSourceRef.current?.disconnect?.();
+			analyserRef.current?.disconnect?.();
+			audioContextRef.current?.close?.();
+		};
+	}, []);
 
 	const reverseBars = [...bars].slice(1, bars.length).reverse();
 

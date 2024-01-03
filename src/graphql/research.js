@@ -46,6 +46,7 @@ export const RESEARCH = gql`
 			title
 			updated
 			uuid
+			brand
 		}
 	}
 `;

@@ -7,27 +7,25 @@ import { useContinueResearch, useStartResearch } from "@/hook/research";
 import { useDebouncedCallback } from "use-debounce";
 import { memo, useEffect, useState } from "react";
 import { BeatLoader } from "react-spinners";
-import {
-	REGEX_FILE,
-	getFileId,
-	parsedText,
-	safeParse,
-	safePlay,
-} from "@/utils/common";
+import { safePlay } from "@/utils/common";
 import { useGeneralStore } from "@/store/general";
 import { Link, useParams } from "react-router-dom";
 import { useLazyQuery } from "@apollo/client";
 import { STREAM } from "@/graphql/research";
 import { audioBufferToBlob, playAudioBlob } from "@/utils/audioBufferToBlob";
-
-const parseMessage = (v) =>
-	parsedText(v, REGEX_FILE, (matchResult) => {
-		const json = safeParse(matchResult);
-		if (json?.question) return json.question;
-		return "";
-	});
+import { extractJsonFromString } from "@/utils/string";
+import { alphabet } from "@/components/ChatItem";
 
 let audioRef = null;
+const combineJsonWithText = (json, text) => {
+	let result = `${text} ${json?.question || ""}`;
+	if (json?.question_type === "radio" && !!json?.answer_options?.length) {
+		result += json.answer_options
+			?.map((i, idx) => `\n${alphabet[idx].toUpperCase()}: ${i}`)
+			.join("");
+	}
+	return result;
+};
 
 const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 	const { id: paramId } = useParams();
@@ -35,7 +33,7 @@ const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 	const [isSpeaking, setIsSpeaking] = useState(!!textStarter);
 
 	const [currentText, setCurrentText] = useState(textStarter);
-	const { setFileId } = useGeneralStore();
+	const { setCurrentQuestion } = useGeneralStore();
 
 	const [voiceLoading, setVoiceLoading] = useState(false);
 	const [getStream] = useLazyQuery(STREAM);
@@ -62,7 +60,7 @@ const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 					URL.revokeObjectURL(audio.src);
 				}
 				const { audio: newAudio } = playAudioBlob(audioBlob);
-				
+
 				safePlay(newAudio, () => setIsSpeaking(false));
 				setAudio(newAudio);
 				audioRef = newAudio;
@@ -89,12 +87,15 @@ const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 			},
 			onError: () => setVoiceLoading(false),
 			onCompleted: async (result) => {
-				const messages = result?.continueRun?.messages || [];
-				const fileId = await getFileId(messages);
-				const parser = parseMessage(messages[0]?.content?.[0]?.text?.value);
-				await handleTTS(parser.join(" "));
-				setCurrentText(parser);
-				if (fileId) setFileId(fileId);
+				const { messages = [] } = result?.continueRun || [];
+				const { obj, str } = extractJsonFromString(
+					messages?.[0]?.content?.[0]?.text?.value
+				);
+				const text = combineJsonWithText(obj, str);
+				setCurrentText(text);
+				await handleTTS(text);
+				setCurrentText(text);
+				if (obj) setCurrentQuestion(obj);
 				setVoiceLoading(false);
 			},
 		});
@@ -112,8 +113,8 @@ const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 
 	useEffect(() => {
 		const onAudioEnd = () => {
-			console.log('onend');
 			setIsSpeaking(false);
+			resetTranscript();
 		};
 		if (audio) {
 			audio.addEventListener("ended", onAudioEnd);
@@ -147,7 +148,7 @@ const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 				<img src="/question.svg" width={41} height={39} />
 			</div>
 
-			<h3 className="text-center text-2xl z-10 mt-6 mb-8 min-w-0 break-words max-h-[100px] overflow-auto">
+			<h3 className="text-center whitespace-pre-wrap text-2xl z-10 mt-6 mb-8 min-w-0 break-words max-h-[100px] overflow-auto">
 				{currentText}
 			</h3>
 
@@ -173,7 +174,7 @@ const Voice = memo(({ startId, textStarter, transcript, resetTranscript }) => {
 
 const VoiceWrapper = () => {
 	const [init, setInit] = useState(false);
-	const { setFileId } = useGeneralStore();
+	const { setCurrentQuestion } = useGeneralStore();
 	const { id: paramId } = useParams();
 	const [currentText, setCurrentText] = useState(null);
 	const {
@@ -185,11 +186,14 @@ const VoiceWrapper = () => {
 
 	const { doRequest: doStartResearch, data: startData } = useStartResearch({
 		onCompleted: async (result) => {
-			const message = result?.startRun?.messages;
-			const fileId = await getFileId(message);
-			const parser = parseMessage(message[0]?.content?.[0]?.text?.value);
-			setCurrentText(parser.join(" "));
-			if (fileId) setFileId(fileId);
+			const messages = result?.startRun?.messages || [];
+			const { obj, str } = extractJsonFromString(
+				messages?.[0]?.content?.[0]?.text?.value
+			);
+
+			const text = combineJsonWithText(obj, str);
+			setCurrentText(text);
+			if (obj) setCurrentQuestion(obj);
 			setInit(true);
 		},
 	});
