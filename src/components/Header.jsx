@@ -12,7 +12,7 @@ const Header = () => {
 				<Link>
 					<img
 						height="auto"
-						className="w-32 sm:w-[170px] object-contain transition-all"
+						className="w-auto h-8 sm:h-12 object-contain transition-all"
 						loading="eager"
 						src={brand || "/logo.svg"}
 						alt="Logo"
