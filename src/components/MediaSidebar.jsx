@@ -8,7 +8,7 @@ const MediaSidebar = () => {
 	const [isOpen, setIsOpen] = useState(false);
 	const { currentQuestion, research } = useGeneralStore();
 	const { files } = research || {};
-	console.log({ currentQuestion })
+
 	const forceUpdate = useForceUpdate();
 	const { image_id } = currentQuestion || {};
 	const imgSrc = useMemo(

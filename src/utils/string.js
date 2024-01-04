@@ -9,7 +9,7 @@ export const safeParse = (str) => {
 };
 
 export const extractJsonFromString = (str = "") => {
-	const match = /(?:```json|```|\[)\n([\s\S]*?)\n(```|\])/.exec(str);
+	const match = /(?:```json\n|```\n|\[)([\s\S]*?)(\n```|\])/.exec(str);
 
 	return {
 		str: match ? str.substring(0, match.index) : str,
