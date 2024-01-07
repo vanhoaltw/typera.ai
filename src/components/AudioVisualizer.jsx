@@ -74,7 +74,7 @@ const AudioVisualizer = ({ audio }) => {
 	const reverseBars = [...bars].slice(1, bars.length).reverse();
 
 	return (
-		<div className="h-20 flex items-center justify-center gap-1.5">
+		<div className="h-20 overflow-hidden flex items-center justify-center gap-1.5">
 			{[...reverseBars, ...bars].map((bar, index) => (
 				<div
 					key={index}
