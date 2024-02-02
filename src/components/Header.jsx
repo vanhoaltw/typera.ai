@@ -14,7 +14,7 @@ const Header = () => {
 						height="auto"
 						className="w-auto h-8 sm:h-12 object-contain transition-all"
 						loading="eager"
-						src={brand || "/logo.svg"}
+						src={brand || "/logo.png"}
 						alt="Logo"
 					/>
 				</Link>
